@@ -66,13 +66,22 @@ Computed once per file, no LLM call needed:
 4. Length gate — below ~1,500 tokens, skip hierarchical indexing regardless of other signals
 5. Formatting uniformity — mostly similar-length, marker-free paragraphs implies unstructured prose
 
-Above threshold → build a hierarchical outline (PageIndex-style tree) *in
-addition to* embedding leaf chunks. Below → vector-only.
+Above threshold → build a hierarchical outline tree (our own algorithm,
+modeled on PageIndex's approach of LLM-guided navigation over node
+summaries rather than embedding similarity — not the PageIndex library
+itself) *in addition to* embedding leaf chunks. Below → vector-only.
 
-At retrieval time: queries referencing structural anchors ("section 3", "the
-appendix") navigate the tree top-down first when one exists; otherwise (and
-always for multi-file queries) plain vector search runs across in-scope
-files' chunks, filtered by `file_id`.
+At retrieval time, tree-guided navigation is attempted for **every** query
+against a file that has a tree — it is never gated on the query containing
+an explicit anchor phrase like "section 3," since the LLM judges relevance
+against node summaries semantically, not by keyword match. Vector search
+also always runs. What an explicit anchor phrase changes is only how much
+the tree path is trusted to short-circuit: with a clear anchor, resolve
+straight to that node and skip broad vector search over the rest of the
+file; without one, run both paths and merge their candidate chunks before
+ranking. So a file's tree can surface relevant content even when the
+question never names a section — it is only excluded from a query's
+candidate pool when the file has no tree at all.
 
 ## Chunking rules
 

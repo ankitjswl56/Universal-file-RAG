@@ -47,7 +47,7 @@ against a working system, not designed in parallel with it.
 | Language | Python |
 | Orchestration | Hand-rolled — no LangChain/LlamaIndex. The whole point of this project is that the hybrid routing logic is visible and explainable, which a framework retriever abstraction would bury |
 | Generation / vision-OCR / transcription | `gemini-3.1-flash-lite` via `google-genai` |
-| Embeddings | Gemini embeddings API |
+| Embeddings | Gemini embeddings API (`gemini-embedding-001`, 3072-dim — `text-embedding-004` is not available on the current API version/key) |
 | Vector DB | Qdrant (local, via docker-compose) — chosen for native payload filtering and hybrid sparse+dense search |
 | Metadata / outline store | SQLite |
 | PDF parsing | PyMuPDF (`fitz`) — text + page position, detects scanned (no text layer) pages |

@@ -1,25 +1,27 @@
 from ufrag.chunking.base import split_text
 from ufrag.models import Chunk, Citation
 
-PARAGRAPH_MAX_CHARS = 1200  # smaller chunks for unstructured content, no boundaries to lean on
+MAX_CHUNK_CHARS = 3200
 
 
-def chunk_unstructured(file_id: str, filename: str, text: str) -> list[Chunk]:
-    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+def chunk_unstructured(file_id: str, filename: str, page_texts: list[str]) -> list[Chunk]:
+    """Per-page chunking for PDFs with no usable heading structure.
+
+    Page is the natural boundary for PDFs regardless of structure, so chunks
+    never span across a page even in the unstructured fallback.
+    """
     chunks = []
     chunk_index = 0
-    line_cursor = 1
-    for paragraph in paragraphs:
-        line_count = paragraph.count("\n") + 1
-        for part in split_text(paragraph, PARAGRAPH_MAX_CHARS):
+    for page_num, text in enumerate(page_texts, start=1):
+        stripped = text.strip()
+        if not stripped:
+            continue
+        for part in split_text(stripped, MAX_CHUNK_CHARS):
             citation = Citation(
                 file_id=file_id,
                 filename=filename,
                 section_path="(no section structure)",
-                location={
-                    "line_start": line_cursor,
-                    "line_end": line_cursor + line_count - 1,
-                },
+                location={"page_start": page_num, "page_end": page_num},
             )
             chunks.append(
                 Chunk(
@@ -32,5 +34,4 @@ def chunk_unstructured(file_id: str, filename: str, text: str) -> list[Chunk]:
                 )
             )
             chunk_index += 1
-        line_cursor += line_count + 1
     return chunks

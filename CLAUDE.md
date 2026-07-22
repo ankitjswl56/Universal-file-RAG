@@ -88,6 +88,21 @@ candidate pool when the file has no tree at all.
 Golden rule: never let overlap cross a structural boundary (page, section,
 function, sheet) — that's where citations become wrong.
 
+`Section`, `OutlineNode`, and `Citation` (in `models.py`) are shared across
+every file type — none of them hardcode line numbers or pages. Each carries
+a generic `location: dict` whose keys are whatever's appropriate for that
+source (`{"line_start", "line_end"}` for markdown, `{"page_start",
+"page_end"}` for PDF; a future spreadsheet extractor would use
+`{"sheet", "cell"}`, audio would use `{"start_s", "end_s"}`). `structure_scorer`
+and `outline_builder` are fully generic over `Section` and never branch on
+file type. `chunking/base.py:chunk_structured` is likewise shared by every
+type that has an outline tree. Only two things are ever type-specific: the
+extractor (raw file → `Section` list) and the unstructured/no-tree chunker
+(since the natural chunk boundary differs — paragraphs for text, pages for
+PDF, rows for spreadsheets, etc.). Adding a new file type should mean
+writing an extractor and, if needed, an unstructured chunker — not touching
+retrieval, indexing, or answer generation.
+
 - Structured PDF/DOCX/Markdown: chunk by section from the outline, ~500–800 tokens, overlap only within a section
 - Scanned PDF/images: OCR via Gemini vision, chunked per page (never merged across pages), confidence is model-self-reported, not a numeric score
 - Spreadsheets: never flatten to plain text. One schema chunk per sheet; formula cells indexed individually with cell ref + formula + evaluated value; row-level chunks only when rows are clearly one-entity-each. Aggregate/arithmetic questions route to a structured-query (pandas) path, not RAG retrieval

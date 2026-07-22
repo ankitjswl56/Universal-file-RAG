@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -13,8 +14,7 @@ CREATE TABLE IF NOT EXISTS outline_nodes (
     summary TEXT NOT NULL,
     level INTEGER NOT NULL,
     ordinal INTEGER NOT NULL,
-    line_start INTEGER NOT NULL,
-    line_end INTEGER NOT NULL
+    location_json TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_outline_file_id ON outline_nodes(file_id);
@@ -42,8 +42,8 @@ class OutlineStore:
         with self._connect() as conn:
             conn.executemany(
                 "INSERT INTO outline_nodes "
-                "(node_id, file_id, parent_id, title, summary, level, ordinal, line_start, line_end) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "(node_id, file_id, parent_id, title, summary, level, ordinal, location_json) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     (
                         n.node_id,
@@ -53,8 +53,7 @@ class OutlineStore:
                         n.summary,
                         n.level,
                         n.ordinal,
-                        n.line_start,
-                        n.line_end,
+                        json.dumps(n.location),
                     )
                     for n in nodes
                 ],
@@ -81,8 +80,7 @@ class OutlineStore:
                 summary=r["summary"],
                 level=r["level"],
                 ordinal=r["ordinal"],
-                line_start=r["line_start"],
-                line_end=r["line_end"],
+                location=json.loads(r["location_json"]),
             )
             for r in rows
         ]

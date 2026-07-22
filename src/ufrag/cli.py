@@ -46,12 +46,15 @@ def status():
 
 @app.command()
 def ingest(path: Path):
-    """Ingest a file (Phase 1: markdown only)."""
+    """Ingest a file (markdown, PDF)."""
     stores = _build_stores()
     result = ingest_file(path, stores)
     typer.echo(f"file_id: {result['file_id']}")
+    typer.echo(f"file_type: {result['file_type']}")
     typer.echo(f"structure_type: {result['structure_type']} ({result['structure_reason']})")
     typer.echo(f"chunks indexed: {result['chunk_count']}")
+    for warning in result["warnings"]:
+        typer.echo(f"warning: {warning}")
 
 
 @app.command()
@@ -78,7 +81,7 @@ def query(
     if answer.citations:
         typer.echo("Citations:")
         for c in answer.citations:
-            typer.echo(f"  - {c['filename']} → {c['section_path']} (lines {c['line_start']}-{c['line_end']})")
+            typer.echo(f"  - {c['label']}")
 
     typer.echo("\nRetrieval trace:")
     for entry in result.trace:

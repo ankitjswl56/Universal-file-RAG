@@ -1,14 +1,13 @@
 import json
 
 from ufrag.gemini_client import GeminiClient
-from ufrag.ingestion.extractors.markdown import MarkdownSection
-from ufrag.models import OutlineNode
+from ufrag.models import OutlineNode, Section
 
 SUMMARY_CONTENT_PREVIEW_CHARS = 500
 
 
 def build_outline(
-    file_id: str, sections: list[MarkdownSection], client: GeminiClient
+    file_id: str, sections: list[Section], client: GeminiClient
 ) -> list[OutlineNode]:
     summaries = _summarize_sections(sections, client)
 
@@ -29,15 +28,14 @@ def build_outline(
                 summary=summary,
                 level=level,
                 ordinal=ordinal,
-                line_start=section.line_start,
-                line_end=section.line_end,
+                location=section.location,
             )
         )
         stack.append((level, node_id))
     return nodes
 
 
-def _summarize_sections(sections: list[MarkdownSection], client: GeminiClient) -> list[str]:
+def _summarize_sections(sections: list[Section], client: GeminiClient) -> list[str]:
     numbered = "\n\n".join(
         f"[{i}] Heading: {s.title}\n{s.content[:SUMMARY_CONTENT_PREVIEW_CHARS]}"
         for i, s in enumerate(sections)

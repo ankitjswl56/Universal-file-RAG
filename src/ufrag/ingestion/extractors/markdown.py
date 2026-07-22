@@ -1,16 +1,7 @@
-from dataclasses import dataclass
+from ufrag.models import Section
 
 
-@dataclass
-class MarkdownSection:
-    level: int
-    title: str
-    content: str
-    line_start: int
-    line_end: int
-
-
-def extract_markdown(text: str) -> list[MarkdownSection]:
+def extract_markdown(text: str) -> list[Section]:
     lines = text.splitlines()
     headings: list[tuple[int, str, int]] = []
     in_code_block = False
@@ -30,12 +21,11 @@ def extract_markdown(text: str) -> list[MarkdownSection]:
 
     if not headings:
         return [
-            MarkdownSection(
+            Section(
                 level=0,
                 title="(untitled)",
                 content=text,
-                line_start=1,
-                line_end=max(len(lines), 1),
+                location={"line_start": 1, "line_end": max(len(lines), 1)},
             )
         ]
 
@@ -44,12 +34,11 @@ def extract_markdown(text: str) -> list[MarkdownSection]:
         end_line = headings[idx + 1][2] if idx + 1 < len(headings) else len(lines)
         content_lines = lines[line_idx:end_line]
         sections.append(
-            MarkdownSection(
+            Section(
                 level=level,
                 title=title,
                 content="\n".join(content_lines),
-                line_start=line_idx + 1,
-                line_end=end_line,
+                location={"line_start": line_idx + 1, "line_end": end_line},
             )
         )
     return sections

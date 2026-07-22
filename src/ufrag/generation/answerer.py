@@ -21,16 +21,24 @@ def generate_answer(question: str, chunks: list[Chunk], client: GeminiClient) ->
         )
 
     context = "\n\n".join(
-        f"[{i}] (file: {c.citation.filename}, section: {c.citation.section_path}, "
-        f"lines: {c.citation.line_start}-{c.citation.line_end})\n{c.text}"
-        for i, c in enumerate(chunks)
+        f"[{i}] ({c.citation.label()})\n{c.text}" for i, c in enumerate(chunks)
     )
 
     prompt = (
         "Answer the question using ONLY the numbered source excerpts below. Do not use "
         "outside knowledge. If the excerpts don't contain enough information to answer, "
-        "say so honestly instead of guessing. If excerpts disagree with each other, point "
-        "out the disagreement explicitly rather than picking one silently.\n\n"
+        "say so honestly instead of guessing.\n\n"
+        "Before answering, silently extract the specific value each excerpt gives for "
+        "the question being asked (e.g. a name, number, date, or yes/no). Only call it a "
+        "disagreement if two excerpts give DIFFERENT values for that same specific thing. "
+        "Example of NOT a disagreement: excerpt A says 'the password is X, and it is not "
+        "shared with the main network' and excerpt B says 'the password is X, rotated "
+        "monthly' — both give the same value (X) for the password, so this is agreement, "
+        "just with different extra details in each excerpt; do not call this a "
+        "disagreement. Example of an actual disagreement: excerpt A says 'the password is "
+        "X' and excerpt B says 'the password is Y' — different values for the same thing. "
+        "If a genuine disagreement exists, point it out explicitly rather than picking "
+        "one side silently.\n\n"
         f"Question: {question}\n\n"
         f"Source excerpts:\n{context}\n\n"
         "Respond with ONLY a JSON object of this shape, no other text:\n"
@@ -67,6 +75,6 @@ def _citation_dict(chunk: Chunk) -> dict:
         "file_id": c.file_id,
         "filename": c.filename,
         "section_path": c.section_path,
-        "line_start": c.line_start,
-        "line_end": c.line_end,
+        "location": c.location,
+        "label": c.label(),
     }

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ufrag.ingestion.extractors.markdown import MarkdownSection
+from ufrag.models import Section
 
 # Rough chars-per-token proxy (~4 chars/token) since no tokenizer is wired up yet.
 LENGTH_GATE_CHARS = 6000
@@ -13,7 +13,7 @@ class StructureDecision:
     reason: str
 
 
-def score_markdown(sections: list[MarkdownSection], total_length: int) -> StructureDecision:
+def score_structure(sections: list[Section], total_length: int) -> StructureDecision:
     if total_length < LENGTH_GATE_CHARS:
         return StructureDecision(
             is_structured=False,

@@ -16,6 +16,17 @@ CAPTION_PROMPT = (
     "details someone could later search for (objects, people, setting, any "
     "visible text or diagrams), not subjective or aesthetic commentary."
 )
+TRANSCRIPTION_PROMPT = (
+    "Transcribe this audio. Split the transcript into natural segments by topic "
+    "or pause, not word-by-word or sentence-by-sentence. For each segment, "
+    "estimate its start and end time in the audio as MM:SS (your best estimate "
+    "from pacing and content — exact frame-accuracy isn't expected or needed), "
+    "and label the speaker if multiple speakers are distinguishable (use "
+    "'Speaker 1', 'Speaker 2', etc. if you can't tell real names; omit the "
+    "speaker field entirely if there's clearly just one speaker).\n\n"
+    "Respond with ONLY a JSON array, no other text, shaped like:\n"
+    '[{"start": "MM:SS", "end": "MM:SS", "speaker": "...", "text": "..."}, ...]'
+)
 
 
 class GeminiClient:
@@ -33,16 +44,19 @@ class GeminiClient:
         return resp.text
 
     def ocr_image(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
-        return self._vision(image_bytes, mime_type, OCR_PROMPT)
+        return self._multimodal(image_bytes, mime_type, OCR_PROMPT)
 
     def caption_image(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
-        return self._vision(image_bytes, mime_type, CAPTION_PROMPT)
+        return self._multimodal(image_bytes, mime_type, CAPTION_PROMPT)
 
-    def _vision(self, image_bytes: bytes, mime_type: str, prompt: str) -> str:
+    def transcribe_audio(self, audio_bytes: bytes, mime_type: str) -> str:
+        return self._multimodal(audio_bytes, mime_type, TRANSCRIPTION_PROMPT)
+
+    def _multimodal(self, data: bytes, mime_type: str, prompt: str) -> str:
         resp = self._client.models.generate_content(
             model=GENERATION_MODEL,
             contents=[
-                types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+                types.Part.from_bytes(data=data, mime_type=mime_type),
                 prompt,
             ],
         )

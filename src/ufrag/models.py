@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 
 
+def _format_timestamp(seconds: float) -> str:
+    seconds = int(seconds)
+    return f"{seconds // 60}:{seconds % 60:02d}"
+
+
 @dataclass
 class Citation:
     file_id: str
@@ -24,6 +29,9 @@ class Citation:
             return f"{self.filename} → {loc['sheet']}!{loc['cell']}"
         if "sheet" in loc:
             return f"{self.filename} → sheet '{loc['sheet']}'"
+        if "start_s" in loc:
+            t1, t2 = _format_timestamp(loc["start_s"]), _format_timestamp(loc["end_s"])
+            return f"{self.filename} → {self.section_path} (~{t1}-{t2})"
         if "line_start" in loc:
             l1, l2 = loc["line_start"], loc["line_end"]
             return f"{self.filename} → {self.section_path} (lines {l1}-{l2})"

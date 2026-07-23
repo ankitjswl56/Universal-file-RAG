@@ -9,6 +9,8 @@ SUPPORTED_TYPES = {
     ".png": "image",
     ".jpg": "image",
     ".jpeg": "image",
+    ".mp3": "audio",
+    ".wav": "audio",
 }
 
 

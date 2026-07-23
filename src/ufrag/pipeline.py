@@ -8,6 +8,7 @@ from ufrag.chunking.base import chunk_structured
 from ufrag.chunking.strategies import docx as docx_chunking
 from ufrag.chunking.strategies import markdown as markdown_chunking
 from ufrag.chunking.strategies import pdf as pdf_chunking
+from ufrag.chunking.strategies.audio import chunk_audio
 from ufrag.chunking.strategies.image import chunk_image
 from ufrag.chunking.strategies.spreadsheet import chunk_spreadsheet
 from ufrag.gemini_client import GeminiClient
@@ -15,6 +16,7 @@ from ufrag.indexing.metadata_store import MetadataStore
 from ufrag.indexing.outline_store import OutlineStore
 from ufrag.indexing.vector_store import VectorStore
 from ufrag.ingestion.detector import detect_file_type
+from ufrag.ingestion.extractors.audio import extract_audio
 from ufrag.ingestion.extractors.docx import extract_docx
 from ufrag.ingestion.extractors.image import extract_image
 from ufrag.ingestion.extractors.markdown import extract_markdown
@@ -75,6 +77,18 @@ def ingest_file(path: Path, stores: Stores) -> dict:
         )
         if ocr_text is None:
             warnings.append("no readable text found in the image; only the visual description was indexed")
+    elif file_type == "audio":
+        segments = extract_audio(path, stores.client)
+        chunks = chunk_audio(file_id, filename, segments)
+        structure_type = "vector_only"
+        structure_reason = (
+            "audio is indexed as timestamped transcript segments; no hierarchical "
+            "structure applies"
+        )
+        if not chunks:
+            warnings.append(
+                "transcription produced no usable segments (check audio format/content)"
+            )
     else:
         raise ValueError(f"unhandled file type: {file_type!r}")
 

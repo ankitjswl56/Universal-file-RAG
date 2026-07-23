@@ -15,8 +15,8 @@ def extract_pdf(path) -> tuple[list[Section], list[str], list[int]]:
     page_texts is the raw per-page text, used as the fallback source for
     per-page chunking when the document doesn't clear the structure gate.
     scanned_pages lists 1-indexed pages with next to no extractable text
-    (likely image-only) — OCR for these lands in a later phase; for now
-    they're just surfaced as ingestion warnings.
+    (likely image-only); the pipeline OCRs these via render_page_image +
+    Gemini vision and substitutes the result back into page_texts.
     """
     doc = fitz.open(path)
     try:
@@ -28,6 +28,17 @@ def extract_pdf(path) -> tuple[list[Section], list[str], list[int]]:
         toc = doc.get_toc()
         sections = _sections_from_toc(toc, page_texts) if toc else _sections_from_font_headings(doc)
         return sections, page_texts, scanned_pages
+    finally:
+        doc.close()
+
+
+def render_page_image(path, page_num: int, dpi: int = 150) -> bytes:
+    """Renders a 1-indexed page to PNG bytes, for feeding a scanned page to Gemini vision."""
+    doc = fitz.open(path)
+    try:
+        page = doc[page_num - 1]
+        pix = page.get_pixmap(dpi=dpi)
+        return pix.tobytes("png")
     finally:
         doc.close()
 

@@ -8,6 +8,7 @@ from ufrag.chunking.base import chunk_structured
 from ufrag.chunking.strategies import docx as docx_chunking
 from ufrag.chunking.strategies import markdown as markdown_chunking
 from ufrag.chunking.strategies import pdf as pdf_chunking
+from ufrag.chunking.strategies.image import chunk_image
 from ufrag.chunking.strategies.spreadsheet import chunk_spreadsheet
 from ufrag.gemini_client import GeminiClient
 from ufrag.indexing.metadata_store import MetadataStore
@@ -15,8 +16,9 @@ from ufrag.indexing.outline_store import OutlineStore
 from ufrag.indexing.vector_store import VectorStore
 from ufrag.ingestion.detector import detect_file_type
 from ufrag.ingestion.extractors.docx import extract_docx
+from ufrag.ingestion.extractors.image import extract_image
 from ufrag.ingestion.extractors.markdown import extract_markdown
-from ufrag.ingestion.extractors.pdf import extract_pdf
+from ufrag.ingestion.extractors.pdf import extract_pdf, render_page_image
 from ufrag.ingestion.extractors.spreadsheet import extract_spreadsheet
 from ufrag.models import Chunk
 from ufrag.structure.outline_builder import build_outline
@@ -63,6 +65,16 @@ def ingest_file(path: Path, stores: Stores) -> dict:
             "spreadsheets are indexed directly as schema/formula/row chunks; there's no "
             "prose heading structure to build a hierarchical outline from"
         )
+    elif file_type == "image":
+        ocr_text, caption = extract_image(path, stores.client)
+        chunks = chunk_image(file_id, filename, ocr_text, caption)
+        structure_type = "vector_only"
+        structure_reason = (
+            "images are indexed as OCR'd text (if any) plus a visual description; "
+            "no hierarchical structure applies"
+        )
+        if ocr_text is None:
+            warnings.append("no readable text found in the image; only the visual description was indexed")
     else:
         raise ValueError(f"unhandled file type: {file_type!r}")
 
@@ -99,14 +111,25 @@ def _ingest_document(
         unstructured_chunker = markdown_chunking.chunk_unstructured
     elif file_type == "pdf":
         sections, page_texts, scanned_pages = extract_pdf(path)
+        for page_num in scanned_pages:
+            image_bytes = render_page_image(path, page_num)
+            ocr_text = stores.client.ocr_image(image_bytes).strip()
+            if ocr_text == "NO_TEXT_FOUND":
+                page_texts[page_num - 1] = ""
+                warnings.append(
+                    f"page {page_num} has no extractable text even via OCR "
+                    "(likely blank or a non-text image)"
+                )
+            else:
+                page_texts[page_num - 1] = ocr_text
+                hedge = " (some text was flagged as unclear)" if "[unclear:" in ocr_text else ""
+                warnings.append(
+                    f"page {page_num} had no native text layer; transcribed via "
+                    f"Gemini vision OCR{hedge}"
+                )
         total_length = sum(len(t) for t in page_texts)
         unstructured_fallback = page_texts
         unstructured_chunker = pdf_chunking.chunk_unstructured
-        warnings.extend(
-            f"page {p} has little to no extractable text (likely scanned); "
-            "OCR support isn't wired up yet, so this page's content is not indexed"
-            for p in scanned_pages
-        )
     elif file_type == "docx":
         sections, paragraphs = extract_docx(path)
         total_length = sum(len(p) for p in paragraphs)

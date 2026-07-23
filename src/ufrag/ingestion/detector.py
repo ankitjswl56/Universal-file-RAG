@@ -6,6 +6,9 @@ SUPPORTED_TYPES = {
     ".pdf": "pdf",
     ".docx": "docx",
     ".xlsx": "spreadsheet",
+    ".png": "image",
+    ".jpg": "image",
+    ".jpeg": "image",
 }
 
 

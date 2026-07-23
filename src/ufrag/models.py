@@ -24,8 +24,10 @@ class Citation:
             return f"{self.filename} → {loc['sheet']}!{loc['cell']}"
         if "sheet" in loc:
             return f"{self.filename} → sheet '{loc['sheet']}'"
-        l1, l2 = loc.get("line_start"), loc.get("line_end")
-        return f"{self.filename} → {self.section_path} (lines {l1}-{l2})"
+        if "line_start" in loc:
+            l1, l2 = loc["line_start"], loc["line_end"]
+            return f"{self.filename} → {self.section_path} (lines {l1}-{l2})"
+        return f"{self.filename} → {self.section_path}"
 
 
 @dataclass

@@ -11,11 +11,20 @@ class Citation:
     location: dict
 
     def label(self) -> str:
-        if "page_start" in self.location:
-            p1, p2 = self.location["page_start"], self.location["page_end"]
+        loc = self.location
+        if "page_start" in loc:
+            p1, p2 = loc["page_start"], loc["page_end"]
             page_str = f"page {p1}" if p1 == p2 else f"pages {p1}-{p2}"
             return f"{self.filename} → {self.section_path} ({page_str})"
-        l1, l2 = self.location.get("line_start"), self.location.get("line_end")
+        if "para_start" in loc:
+            p1, p2 = loc["para_start"], loc["para_end"]
+            para_str = f"paragraph {p1}" if p1 == p2 else f"paragraphs {p1}-{p2}"
+            return f"{self.filename} → {self.section_path} ({para_str})"
+        if "cell" in loc:
+            return f"{self.filename} → {loc['sheet']}!{loc['cell']}"
+        if "sheet" in loc:
+            return f"{self.filename} → sheet '{loc['sheet']}'"
+        l1, l2 = loc.get("line_start"), loc.get("line_end")
         return f"{self.filename} → {self.section_path} (lines {l1}-{l2})"
 
 

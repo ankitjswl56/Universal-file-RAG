@@ -4,6 +4,8 @@ SUPPORTED_TYPES = {
     ".md": "markdown",
     ".markdown": "markdown",
     ".pdf": "pdf",
+    ".docx": "docx",
+    ".xlsx": "spreadsheet",
 }
 
 

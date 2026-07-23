@@ -105,7 +105,7 @@ retrieval, indexing, or answer generation.
 
 - Structured PDF/DOCX/Markdown: chunk by section from the outline, ~500–800 tokens, overlap only within a section
 - Scanned PDF/images: OCR via Gemini vision, chunked per page (never merged across pages), confidence is model-self-reported, not a numeric score
-- Spreadsheets: never flatten to plain text. One schema chunk per sheet; formula cells indexed individually with cell ref + formula + evaluated value; row-level chunks only when rows are clearly one-entity-each. Aggregate/arithmetic questions route to a structured-query (pandas) path, not RAG retrieval
+- Spreadsheets (implemented — `ingestion/extractors/spreadsheet.py`, `chunking/strategies/spreadsheet.py`): never flatten to plain text. One schema chunk per sheet; formula cells indexed individually with cell ref + formula + evaluated value; row-level chunks (capped at 200 rows/sheet, else schema+formulas only) when rows are clearly one-entity-each. Skips the outline/hierarchy path entirely — no prose headings to build a tree from, always `vector_only`. **Not yet implemented**: routing aggregate/arithmetic questions ("what's the sum of column D") to a structured-query (pandas) path — these currently just go through normal RAG retrieval same as anything else, which works if the answer is a single cell/row but won't correctly answer true aggregate questions over many rows
 - Code: chunk per function/class via tree-sitter AST boundaries; a separate non-vector import/call graph answers structural questions ("what calls this")
 - Audio: transcribed directly by Gemini (no Whisper), chunked by topic/pause boundary; timestamps are model-estimated, not frame-exact — say so in citations, don't overstate precision
 
@@ -173,3 +173,12 @@ building out the bespoke per-type extractors.
 - No word-level audio timestamps or numeric OCR confidence (traded away by
   going Gemini-only instead of Whisper/Tesseract) — citations for audio/OCR
   content should reflect that this is approximate, not exact
+- Spreadsheet formula cells only have a cached value if the file was actually
+  opened/saved by a real spreadsheet app (Excel, Sheets, LibreOffice) at
+  least once — openpyxl doesn't evaluate formulas itself. Files generated
+  straight from a script (pandas/openpyxl exports, our own test fixtures)
+  have no cached value at all. `ingestion/extractors/spreadsheet.py` falls
+  back to evaluating exactly two patterns itself (`SUM` over a same-column
+  range, and a single binary op between two cell refs) when no cached value
+  exists; anything more complex is left as `None` rather than guessed at —
+  this is a narrow fallback, not a general formula engine
